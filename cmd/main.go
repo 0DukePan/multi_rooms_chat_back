@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dukepan/multi-rooms-chat-back/internal/api"
+	"github.com/dukepan/multi-rooms-chat-back/internal/auth"
 	"github.com/dukepan/multi-rooms-chat-back/internal/cache"
 	"github.com/dukepan/multi-rooms-chat-back/internal/config"
 	"github.com/dukepan/multi-rooms-chat-back/internal/db"
@@ -93,8 +94,14 @@ func main() {
 		logger.Fatal(context.Background(), "Failed to initialize local file store: %v", err)
 	}
 
+	// Initialize JWT Manager
+	jwtManager, err := auth.NewJWTManager(cfg.JWTRSAPrivateKey, cfg.JWTRSAPublicKey) // Changed from JWTPrivateKey, JWTPublicKey
+	if err != nil {
+		logger.Fatal(context.Background(), "Failed to initialize JWT manager: %v", err)
+	}
+
 	// Setup HTTP router
-	router := api.NewRouter(database, redisCache, roomMgr, messageWriter, syncEngine, clamAVClient, localFileStore, cfg)
+	router := api.NewRouter(database, redisCache, roomMgr, messageWriter, syncEngine, clamAVClient, localFileStore, cfg, jwtManager, logger)
 
 	// Create HTTP server
 	server := &http.Server{

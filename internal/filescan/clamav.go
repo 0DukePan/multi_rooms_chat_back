@@ -8,6 +8,14 @@ import (
 	// "github.com/dutchcoders/go-clamav" // Temporarily removed due to dependency issues
 )
 
+// ScanResult type represents the result of a ClamAV scan.
+type ScanResult bool
+
+const (
+	Clean         ScanResult = true
+	VirusDetected ScanResult = false
+)
+
 // ClamAVClient manages interactions with a ClamAV daemon
 type ClamAVClient struct {
 	// client *clamav.ClamAV // Temporarily removed

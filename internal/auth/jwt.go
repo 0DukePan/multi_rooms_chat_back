@@ -9,23 +9,10 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	// "github.com/dukepan/multi-rooms-chat-back/internal/utils/logger"
 )
 
-// Placeholder for RSA private and public keys. In a real application, these should be securely loaded
-// from environment variables, files, or a secrets manager.
-const (
-	rsaPrivateKey = `-----BEGIN RSA PRIVATE KEY-----
-MIICXAIBAAKBgQC4i1Q+X5+5P9pT6E9gC9y...` // Replace with your actual private key
-	rsaPublicKey = `-----BEGIN PUBLIC KEY-----
-MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBALiLVD5fn7k/2lPoT2AL3IP...` // Replace with your actual public key
-)
-
-type Claims struct {
-	UserID   uuid.UUID `json:"user_id"`
-	Username string    `json:"username"`
-	Email    string    `json:"email"`
-	jwt.RegisteredClaims
-}
+const ()
 
 type JWTManager struct {
 	privateKey *rsa.PrivateKey
@@ -59,6 +46,14 @@ func NewJWTManager(privateKeyPEM, publicKeyPEM string) (*JWTManager, error) {
 	}
 
 	return &JWTManager{privateKey: pk, publicKey: rsaPub}, nil
+}
+
+// Claims defines the JWT claims structure
+type Claims struct {
+	UserID   uuid.UUID `json:"user_id"`
+	Username string    `json:"username"`
+	Email    string    `json:"email"`
+	jwt.RegisteredClaims
 }
 
 // GenerateToken creates a new JWT token

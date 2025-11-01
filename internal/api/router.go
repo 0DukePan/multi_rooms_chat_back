@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -15,6 +14,7 @@ import (
 	"github.com/dukepan/multi-rooms-chat-back/internal/filestore"
 	"github.com/dukepan/multi-rooms-chat-back/internal/middleware"
 	"github.com/dukepan/multi-rooms-chat-back/internal/rooms"
+	"github.com/dukepan/multi-rooms-chat-back/internal/utils"
 )
 
 type Router struct {
@@ -24,35 +24,30 @@ type Router struct {
 	roomMgr       *rooms.Manager
 	jwtMgr        *auth.JWTManager
 	cfg           *config.Config
-	messageWriter rooms.MessageWriterService // Use interface
-	syncEngine    rooms.SyncEngineService    // Add SyncEngineService
-	fileStore     *filestore.LocalFileStore  // Use local file store
+	messageWriter rooms.MessageWriterService
+	syncEngine    rooms.SyncEngineService
+	fileStore     *filestore.LocalFileStore
 	clamAVClient  *filescan.ClamAVClient
+	logger        *utils.Logger // Add logger field
 }
 
 // NewRouter creates a new HTTP router with configured handlers and middleware
-func NewRouter(database *db.Database, redisCache *cache.Cache, roomMgr *rooms.Manager, messageWriter rooms.MessageWriterService, syncEngine rooms.SyncEngineService, clamAVClient *filescan.ClamAVClient, localFileStore *filestore.LocalFileStore, cfg *config.Config) http.Handler {
-	jwtMgr, err := auth.NewJWTManager(cfg.JWTPrivateKey, cfg.JWTPublicKey)
-	if err != nil {
-		log.Fatalf("Failed to initialize JWT manager: %v", err)
-	}
-
+func NewRouter(database *db.Database, redisCache *cache.Cache, roomMgr *rooms.Manager, messageWriter rooms.MessageWriterService, syncEngine rooms.SyncEngineService, clamAVClient *filescan.ClamAVClient, localFileStore *filestore.LocalFileStore, cfg *config.Config, jwtManager *auth.JWTManager, logger *utils.Logger) http.Handler {
 	// Initialize Rate Limiter
 	rateLimiter := middleware.NewRateLimiter(redisCache.GetClient())
-
-	// The fileStore is initialized in main.go and passed here. No need to re-initialize.
 
 	r := &Router{
 		mux:           http.NewServeMux(),
 		db:            database,
 		cache:         redisCache,
 		roomMgr:       roomMgr,
-		jwtMgr:        jwtMgr,
+		jwtMgr:        jwtManager,
 		cfg:           cfg,
 		messageWriter: messageWriter,
-		syncEngine:    syncEngine,     // Initialize syncEngine
-		fileStore:     localFileStore, // Use local file store
+		syncEngine:    syncEngine,
+		fileStore:     localFileStore,
 		clamAVClient:  clamAVClient,
+		logger:        logger,
 	}
 
 	// Apply Request ID middleware to all requests
@@ -77,9 +72,9 @@ func NewRouter(database *db.Database, redisCache *cache.Cache, roomMgr *rooms.Ma
 	r.mux.Handle("/rooms/{id}/search", r.AuthMiddleware(rateLimiter.Middleware(http.HandlerFunc(r.SearchMessagesHandler))))
 	r.mux.Handle("/rooms/{id}/messages/{messageID}", r.AuthMiddleware(rateLimiter.Middleware(http.HandlerFunc(r.EditMessageHandler))))
 	r.mux.Handle("/rooms/{id}/messages/{messageID}", r.AuthMiddleware(rateLimiter.Middleware(http.HandlerFunc(r.SoftDeleteMessageHandler))))
-	r.mux.Handle("/rooms/{id}/messages/{messageID}/reactions", r.AuthMiddleware(rateLimiter.Middleware(http.HandlerFunc(r.AddReactionHandler))))            // Add reaction
-	r.mux.Handle("/rooms/{id}/messages/{messageID}/reactions/{emoji}", r.AuthMiddleware(rateLimiter.Middleware(http.HandlerFunc(r.RemoveReactionHandler)))) // Remove reaction
-	r.mux.Handle("/files/upload", r.AuthMiddleware(rateLimiter.Middleware(http.HandlerFunc(r.UploadFileHandler))))                                          // New upload endpoint
+	r.mux.Handle("/rooms/{id}/messages/{messageID}/reactions", r.AuthMiddleware(rateLimiter.Middleware(http.HandlerFunc(r.AddReactionHandler))))
+	r.mux.Handle("/rooms/{id}/messages/{messageID}/reactions/{emoji}", r.AuthMiddleware(rateLimiter.Middleware(http.HandlerFunc(r.RemoveReactionHandler))))
+	r.mux.Handle("/files/upload", r.AuthMiddleware(rateLimiter.Middleware(http.HandlerFunc(r.UploadFileHandler))))
 	// WebSocket endpoint will handle rate limiting internally or at a different layer if needed
 	r.mux.Handle("/ws", http.HandlerFunc(r.WebSocketHandler))
 
