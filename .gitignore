@@ -1,0 +1,43 @@
+# Binaries for programs and plugins
+*.exe
+*.darwin-arm64
+*.darwin-amd64
+*.freebsd
+*.linux-arm64
+*.linux-amd64
+*.netbsd
+*.openbsd
+*.plan9
+*.windows-arm64
+*.windows-amd64
+
+# Test binary, generated with go test -c
+*.test
+
+# Output of the go generate command
+*.pb.go
+
+# Dependencies
+vendor/
+
+# Go module cache
+.cache/go-build/
+
+# IDE files
+.idea/
+.vscode/
+.DS_Store
+
+# Log files
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Docker
+!Dockerfile
+!docker-compose.yml
+
+# Compiled GoChat binary
+gochat
